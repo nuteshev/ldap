@@ -1,0 +1,41 @@
+- hosts: all # part running on all hosts
+  become: true
+  tasks:
+  - name: make sure line 'dns=none' is set in /etc/NetworkManager/NetworkManager.conf
+    ini_file:
+      path: /etc/NetworkManager/NetworkManager.conf
+      state: present
+      no_extra_spaces: yes
+      section: main
+      option: dns
+      value: none
+      owner: root
+      group: root
+      mode: 0644
+    notify: Reload NetworkManager
+  - name: Flush handlers
+    meta: flush_handlers
+  - name: install packages 
+    yum:
+      name: "{{ packages }}"
+      state: present
+    vars:
+      packages:
+      - freeipa-client
+  - name: copy resolv.conf
+    copy:
+      src: resolv.conf
+      dest: /etc/resolv.conf
+  - name: copy script
+    copy:
+      src: setup_client.sh
+      dest: /root/setup_client.sh
+      mode: 0700
+  - name: run install client
+    shell: /root/setup_client.sh
+  
+  handlers:
+  - name: Reload NetworkManager
+    service:
+      name: NetworkManager
+      state: restarted
